@@ -2,6 +2,12 @@
 import inquirer from "inquirer";
 import axios from "axios";
 import { faker } from "@faker-js/faker";
+import {
+  loadCache,
+  saveCache,
+  addMissingFieldsBasedOnSchema,
+} from "./lib/schemaCache.js";
+
 const API_URL = "http://localhost:3000/api/users";
 // Función principal del CLI
 async function runCLI() {
@@ -103,7 +109,10 @@ async function handleGetById() {
 }
 
 // Función para crear un usuario
+
 async function handleCreate() {
+  console.log("🛠️ Iniciando creación de usuario...");
+
   const { autoGenerate } = await inquirer.prompt([
     {
       type: "confirm",
@@ -119,9 +128,13 @@ async function handleCreate() {
       name: faker.lorem.words(2),
       email: faker.internet.email(),
       age: faker.number.int({ min: 1, max: 100 }),
-      address: faker.address.streetAddress(),
+      address: faker.location.streetAddress(),
       isActive: faker.datatype.boolean(),
     };
+
+    // Verificar y agregar campos faltantes
+    userData = addMissingFieldsBasedOnSchema(userData);
+
     console.log("🔧 Datos generados automáticamente:", userData);
   } else {
     const { name, email, age, address, isActive } = await inquirer.prompt([
@@ -137,16 +150,174 @@ async function handleCreate() {
       },
     ]);
     userData = { name, email, age: parseInt(age), address, isActive };
+
+    // Verificar y agregar campos faltantes
+    userData = addMissingFieldsBasedOnSchema(userData);
+
+    console.log("📥 Datos ingresados manualmente:", userData);
   }
 
   try {
+    console.log("📤 Enviando datos al servidor para crear usuario...");
     const response = await axios.post(API_URL, userData);
     console.log("✅ Usuario creado:", response.data);
   } catch (err) {
     console.error(`❌ Error al crear el usuario: ${err.message}`);
   }
 }
+async function handleUpdate() {
+  console.log("🛠️ Iniciando actualización de usuario...");
+  let users;
 
-// Otras funciones (`handleUpdate`, `handleDelete`) funcionan de forma similar.
+  try {
+    console.log("📤 Solicitando lista de usuarios al servidor...");
+    const response = await axios.get(`${API_URL}`);
+    users = response.data;
+    console.log("📋 Lista de usuarios obtenida:", users);
+  } catch (err) {
+    console.error("❌ Error al obtener los usuarios:", err.message);
+    return;
+  }
+
+  if (users.length === 0) {
+    console.log("⚠️ No hay usuarios disponibles para actualizar.");
+    return;
+  }
+
+  const userOptions = users.map((user) => ({
+    name: `${user.name} (ID: ${user._id})`,
+    value: user._id,
+  }));
+
+  userOptions.push({ name: "Go Back", value: "goBack" });
+
+  const { id } = await inquirer.prompt([
+    {
+      type: "list",
+      name: "id",
+      message: "Selecciona un usuario para actualizar:",
+      choices: userOptions,
+    },
+  ]);
+
+  if (id === "goBack") return;
+
+  const { autoGenerate } = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "autoGenerate",
+      message:
+        "¿Quieres generar automáticamente los datos para la actualización?",
+    },
+  ]);
+
+  let updateData;
+
+  if (autoGenerate) {
+    updateData = {
+      name: faker.name.fullName(),
+      email: faker.internet.email(),
+      age: faker.number.int({ min: 18, max: 80 }),
+      address: faker.address.streetAddress(),
+      isActive: faker.datatype.boolean(),
+    };
+    console.log(
+      "🔧 Datos generados automáticamente para la actualización:",
+      updateData
+    );
+  } else {
+    const { name, email, age, address, isActive } = await inquirer.prompt([
+      { type: "input", name: "name", message: "Nuevo nombre del usuario:" },
+      { type: "input", name: "email", message: "Nuevo email del usuario:" },
+      { type: "input", name: "age", message: "Nueva edad del usuario:" },
+      {
+        type: "input",
+        name: "address",
+        message: "Nueva dirección del usuario:",
+      },
+      {
+        type: "confirm",
+        name: "isActive",
+        message: "¿El usuario está activo?",
+        default: true,
+      },
+    ]);
+    updateData = { name, email, age: parseInt(age), address, isActive };
+    console.log(
+      "📥 Datos ingresados manualmente para la actualización:",
+      updateData
+    );
+  }
+
+  try {
+    console.log(
+      `📤 Enviando solicitud de actualización al servidor para ID ${id}...`
+    );
+    const response = await axios.put(`${API_URL}/${id}`, updateData);
+    console.log("✅ Usuario actualizado exitosamente:", response.data);
+  } catch (err) {
+    console.error(`❌ Error al actualizar el usuario: ${err.message}`);
+  }
+}
+async function handleDelete() {
+  console.log("🛠️ Iniciando eliminación de usuario...");
+  let users;
+
+  try {
+    console.log("📤 Solicitando lista de usuarios al servidor...");
+    const response = await axios.get(`${API_URL}`);
+    users = response.data;
+    console.log("📋 Lista de usuarios obtenida:", users);
+  } catch (err) {
+    console.error("❌ Error al obtener los usuarios:", err.message);
+    return;
+  }
+
+  if (users.length === 0) {
+    console.log("⚠️ No hay usuarios disponibles para eliminar.");
+    return;
+  }
+
+  const userOptions = users.map((user) => ({
+    name: `${user.name} (ID: ${user._id})`,
+    value: user._id,
+  }));
+
+  userOptions.push({ name: "Go Back", value: "goBack" });
+
+  const { id } = await inquirer.prompt([
+    {
+      type: "list",
+      name: "id",
+      message: "Selecciona un usuario para eliminar:",
+      choices: userOptions,
+    },
+  ]);
+
+  if (id === "goBack") return;
+
+  const { confirmDelete } = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "confirmDelete",
+      message: `¿Estás seguro de que deseas eliminar al usuario con ID ${id}?`,
+    },
+  ]);
+
+  if (!confirmDelete) {
+    console.log("❌ Eliminación cancelada.");
+    return;
+  }
+
+  try {
+    console.log(
+      `📤 Enviando solicitud de eliminación al servidor para ID ${id}...`
+    );
+    await axios.delete(`${API_URL}/${id}`);
+    console.log("✅ Usuario eliminado exitosamente.");
+  } catch (err) {
+    console.error(`❌ Error al eliminar el usuario: ${err.message}`);
+  }
+}
 
 runCLI();
