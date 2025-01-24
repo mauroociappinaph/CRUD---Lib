@@ -113,6 +113,14 @@ async function handleGetById() {
 async function handleCreate() {
   console.log("🛠️ Iniciando creación de usuario...");
 
+  // Cargar el esquema desde el cache
+  console.log("🔍 Cargando esquema desde el cache...");
+  const schemaCache = loadCache();
+
+  if (!schemaCache["User"]) {
+    console.warn("⚠️ No se encontró el esquema para 'User' en el cache.");
+  }
+
   const { autoGenerate } = await inquirer.prompt([
     {
       type: "confirm",
@@ -130,11 +138,11 @@ async function handleCreate() {
       age: faker.number.int({ min: 1, max: 100 }),
       address: faker.location.streetAddress(),
       isActive: faker.datatype.boolean(),
+      password: faker.internet.password(), // Generar automáticamente el password
     };
 
-    // Verificar y agregar campos faltantes
+    // Completar campos faltantes basados en el esquema
     userData = addMissingFieldsBasedOnSchema(userData);
-
     console.log("🔧 Datos generados automáticamente:", userData);
   } else {
     const { name, email, age, address, isActive } = await inquirer.prompt([
@@ -149,11 +157,19 @@ async function handleCreate() {
         default: true,
       },
     ]);
-    userData = { name, email, age: parseInt(age), address, isActive };
 
-    // Verificar y agregar campos faltantes
+    // Generar automáticamente el password incluso para datos manuales
+    userData = {
+      name,
+      email,
+      age: parseInt(age),
+      address,
+      isActive,
+      password: faker.internet.password(), // Generar automáticamente el password
+    };
+
+    // Completar campos faltantes basados en el esquema
     userData = addMissingFieldsBasedOnSchema(userData);
-
     console.log("📥 Datos ingresados manualmente:", userData);
   }
 
@@ -161,6 +177,14 @@ async function handleCreate() {
     console.log("📤 Enviando datos al servidor para crear usuario...");
     const response = await axios.post(API_URL, userData);
     console.log("✅ Usuario creado:", response.data);
+
+    // Actualizar el cache si el esquema cambia en el servidor
+    if (response.data.updatedSchema) {
+      console.log("♻️ Actualizando el cache con el nuevo esquema...");
+      schemaCache["User"] = response.data.updatedSchema; // Simula una respuesta con esquema actualizado
+      saveCache(schemaCache);
+      console.log("✅ Cache actualizado.");
+    }
   } catch (err) {
     console.error(`❌ Error al crear el usuario: ${err.message}`);
   }
