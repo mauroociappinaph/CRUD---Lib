@@ -1,0 +1,23 @@
+{
+  "name": "my-crud-lib",
+  "version": "1.0.0",
+  "description": "A dynamic CRUD library for Mongoose with CLI support",
+  "main": "index.js",
+  "bin": {
+    "crud-tester": "./cli.js"
+  },
+  "keywords": [
+    "CRUD",
+    "Mongoose",
+    "Node.js",
+    "CLI"
+  ],
+  "author": "Mauro Ciappina",
+  "license": "MIT",
+  "dependencies": {
+    "@faker-js/faker": "^8.4.1",
+    "axios": "^1.7.9",
+    "inquirer": "^9.3.7",
+    "mongoose": "^6.13.8"
+  }
+}
