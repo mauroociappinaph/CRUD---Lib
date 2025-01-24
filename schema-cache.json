@@ -1,0 +1,141 @@
+{
+  "User": {
+    "name": {
+      "enumValues": [],
+      "regExp": null,
+      "path": "name",
+      "instance": "String",
+      "validators": [
+        {
+          "message": "Path `{PATH}` is required.",
+          "type": "required"
+        }
+      ],
+      "getters": [],
+      "setters": [],
+      "_presplitPath": [
+        "name"
+      ],
+      "options": {
+        "required": true
+      },
+      "_index": null,
+      "isRequired": true,
+      "originalRequiredValue": true
+    },
+    "email": {
+      "enumValues": [],
+      "regExp": null,
+      "path": "email",
+      "instance": "String",
+      "validators": [
+        {
+          "message": "Path `{PATH}` is required.",
+          "type": "required"
+        }
+      ],
+      "getters": [],
+      "setters": [],
+      "_presplitPath": [
+        "email"
+      ],
+      "options": {
+        "unique": true,
+        "required": true
+      },
+      "_index": {
+        "unique": true
+      },
+      "isRequired": true,
+      "originalRequiredValue": true
+    },
+    "age": {
+      "path": "age",
+      "instance": "Number",
+      "validators": [
+        {
+          "message": "Path `{PATH}` is required.",
+          "type": "required"
+        }
+      ],
+      "getters": [],
+      "setters": [],
+      "_presplitPath": [
+        "age"
+      ],
+      "options": {
+        "required": true
+      },
+      "_index": null,
+      "isRequired": true,
+      "originalRequiredValue": true
+    },
+    "address": {
+      "enumValues": [],
+      "regExp": null,
+      "path": "address",
+      "instance": "String",
+      "validators": [
+        {
+          "message": "Path `{PATH}` is required.",
+          "type": "required"
+        }
+      ],
+      "getters": [],
+      "setters": [],
+      "_presplitPath": [
+        "address"
+      ],
+      "options": {
+        "required": true
+      },
+      "_index": null,
+      "isRequired": true,
+      "originalRequiredValue": true
+    },
+    "isActive": {
+      "path": "isActive",
+      "instance": "Boolean",
+      "validators": [],
+      "getters": [],
+      "setters": [],
+      "_presplitPath": [
+        "isActive"
+      ],
+      "options": {
+        "default": true
+      },
+      "_index": null,
+      "defaultValue": true
+    },
+    "_id": {
+      "path": "_id",
+      "instance": "ObjectID",
+      "validators": [],
+      "getters": [],
+      "setters": [
+        null
+      ],
+      "_presplitPath": [
+        "_id"
+      ],
+      "options": {
+        "auto": true,
+        "type": "ObjectId"
+      },
+      "_index": null
+    },
+    "__v": {
+      "path": "__v",
+      "instance": "Number",
+      "validators": [],
+      "getters": [],
+      "setters": [],
+      "_presplitPath": [
+        "__v"
+      ],
+      "options": {},
+      "_index": null
+    }
+  }
+}

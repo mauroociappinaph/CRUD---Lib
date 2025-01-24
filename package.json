@@ -6,6 +6,7 @@
   "bin": {
     "crud-tester": "./cli.js"
   },
+  "type": "module",
   "keywords": [
     "CRUD",
     "Mongoose",
@@ -17,6 +18,7 @@
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
     "axios": "^1.7.9",
+    "express": "^4.21.2",
     "inquirer": "^9.3.7",
     "mongoose": "^6.13.8"
   }
