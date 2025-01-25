@@ -1,11 +1,12 @@
 import express from "express";
-import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
+import mongoSanitizeMiddleware from "./mongoSanitize.js"; // Importa el middleware
 
 const globalMiddlewares = (app) => {
-  app.use(express.json()); // Manejo de JSON en solicitudes
-  app.use(mongoSanitize()); // Sanitización contra inyección
-  app.use(helmet()); // Seguridad HTTP
+  app.use(express.json());
+  mongoSanitizeMiddleware(app);
+  app.use(helmet());
+
   console.log("✅ Middlewares globales configurados");
 };
 
