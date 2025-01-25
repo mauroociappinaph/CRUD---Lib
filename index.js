@@ -8,6 +8,8 @@ import Joi from "joi";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import swaggerDocument from "./swagger.json" assert { type: "json" };
+import swaggerUi from "swagger-ui-express";
 
 // Cargar variables de entorno
 dotenv.config();
@@ -27,6 +29,10 @@ const limiter = rateLimit({
   message: "Demasiadas solicitudes desde esta IP. Intenta de nuevo más tarde.",
 });
 app.use(limiter);
+
+// **Swagger API Docs**
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+console.log("📄 Swagger Docs disponibles en http://localhost:3000/api-docs");
 
 // Aplicar middlewares definidos en la configuración
 if (config.middleware && Array.isArray(config.middleware)) {
