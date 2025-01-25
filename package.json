@@ -1,10 +1,10 @@
 {
-  "name": "quick-crud",
+  "name": "faster-crud",
   "version": "1.0.0",
   "description": "A dynamic CRUD library for Mongoose with CLI support",
   "main": "index.js",
   "bin": {
-    "quick-crud": "./cli.js"
+    "faster-crud": "cli.js"
   },
   "type": "module",
   "keywords": [
@@ -15,15 +15,19 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/mauroociappinaph/CRUD---Lib"
+    "url": "git+https://github.com/mauroociappinaph/CRUD---Lib.git"
   },
   "author": "Mauro Ciappina",
   "license": "MIT",
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
     "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "faster-crud": "file:faster-crud-1.0.0.tgz",
     "inquirer": "^9.3.7",
+    "joi": "^17.13.3",
     "mongoose": "^6.13.8"
   },
   "files": [
