@@ -1,7 +1,7 @@
 {
   "name": "faster-crud",
-  "version": "1.0.1",
-  "description": "A dynamic CRUD library for Mongoose with CLI support",
+  "version": "1.1.0",
+  "description": "A dynamic CRUD library for Mongoose with CLI support, validation, and Swagger integration",
   "main": "index.js",
   "bin": {
     "faster-crud": "cli.js"
@@ -14,7 +14,10 @@
     "CRUD",
     "Mongoose",
     "Node.js",
-    "CLI"
+    "CLI",
+    "Swagger",
+    "Validation",
+    "Pagination"
   ],
   "repository": {
     "type": "git",
@@ -39,7 +42,8 @@
     "index.js",
     "cli.js",
     "lib/",
-    "crud.config.js"
+    "crud.config.js",
+    "swagger.json"
   ],
   "engines": {
     "node": ">=16.0.0"
