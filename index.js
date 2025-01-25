@@ -3,11 +3,15 @@ import mongoose from "mongoose";
 import User from "./lib/models/user.js";
 import { loadConfig } from "./lib/configLoader.js";
 import config from "./crud.config.js";
+import mongoSanitize from "express-mongo-sanitize";
+
+// Middleware para sanitizar entradas
 
 const app = express();
 
 // Middleware global
 app.use(express.json());
+app.use(mongoSanitize());
 console.log("✅ Middleware global configurado");
 
 // Aplicar middleware definido en la configuración
