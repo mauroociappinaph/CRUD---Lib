@@ -1,10 +1,10 @@
 {
-  "name": "my-crud-lib",
+  "name": "quick-crud",
   "version": "1.0.0",
   "description": "A dynamic CRUD library for Mongoose with CLI support",
   "main": "index.js",
   "bin": {
-    "crud-tester": "./cli.js"
+    "quick-crud": "./cli.js"
   },
   "type": "module",
   "keywords": [
@@ -13,6 +13,10 @@
     "Node.js",
     "CLI"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mauroociappinaph/CRUD---Lib"
+  },
   "author": "Mauro Ciappina",
   "license": "MIT",
   "dependencies": {
@@ -21,5 +25,14 @@
     "express": "^4.21.2",
     "inquirer": "^9.3.7",
     "mongoose": "^6.13.8"
+  },
+  "files": [
+    "index.js",
+    "cli.js",
+    "lib/",
+    "crud.config.js"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
