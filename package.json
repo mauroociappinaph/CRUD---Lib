@@ -25,7 +25,9 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.5.0",
     "faster-crud": "file:faster-crud-1.0.0.tgz",
+    "helmet": "^8.0.0",
     "inquirer": "^9.3.7",
     "joi": "^17.13.3",
     "mongoose": "^6.13.8"
