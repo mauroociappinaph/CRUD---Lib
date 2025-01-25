@@ -51,5 +51,13 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "supertest": "^7.0.0"
-  }
+  },
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "bugs": {
+    "url": "https://github.com/mauroociappinaph/CRUD---Lib/issues"
+  },
+  "homepage": "https://github.com/mauroociappinaph/CRUD---Lib#readme"
 }

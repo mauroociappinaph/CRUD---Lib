@@ -103,16 +103,19 @@ async function handleGetAll() {
 
 // Función para obtener un usuario por ID
 async function handleGetById() {
-  let users;
+  let users = [];
   try {
     const response = await axios.get(API_URL);
-    users = response.data;
+    console.log("📋 Respuesta de la API:", response.data); // Inspeccionar respuesta
+    users = Array.isArray(response.data)
+      ? response.data
+      : response.data.data || [];
   } catch (err) {
     console.error("❌ Error al obtener los usuarios:", err.message);
     return;
   }
 
-  if (users.length === 0) {
+  if (!Array.isArray(users) || users.length === 0) {
     console.log("⚠️ No hay usuarios disponibles.");
     return;
   }
@@ -226,19 +229,21 @@ async function handleCreate() {
 }
 async function handleUpdate() {
   console.log("🛠️ Iniciando actualización de usuario...");
-  let users;
+  let users = [];
 
   try {
     console.log("📤 Solicitando lista de usuarios al servidor...");
-    const response = await axios.get(`${API_URL}`);
-    users = response.data;
-    console.log("📋 Lista de usuarios obtenida:", users);
+    const response = await axios.get(API_URL);
+    console.log("📋 Respuesta de la API:", response.data); // Inspeccionar respuesta
+    users = Array.isArray(response.data)
+      ? response.data
+      : response.data.data || [];
   } catch (err) {
     console.error("❌ Error al obtener los usuarios:", err.message);
     return;
   }
 
-  if (users.length === 0) {
+  if (!Array.isArray(users) || users.length === 0) {
     console.log("⚠️ No hay usuarios disponibles para actualizar.");
     return;
   }
@@ -320,19 +325,21 @@ async function handleUpdate() {
 }
 async function handleDelete() {
   console.log("🛠️ Iniciando eliminación de usuario...");
-  let users;
+  let users = [];
 
   try {
     console.log("📤 Solicitando lista de usuarios al servidor...");
-    const response = await axios.get(`${API_URL}`);
-    users = response.data;
-    console.log("📋 Lista de usuarios obtenida:", users);
+    const response = await axios.get(API_URL);
+    console.log("📋 Respuesta de la API:", response.data); // Inspeccionar respuesta
+    users = Array.isArray(response.data)
+      ? response.data
+      : response.data.data || [];
   } catch (err) {
     console.error("❌ Error al obtener los usuarios:", err.message);
     return;
   }
 
-  if (users.length === 0) {
+  if (!Array.isArray(users) || users.length === 0) {
     console.log("⚠️ No hay usuarios disponibles para eliminar.");
     return;
   }
