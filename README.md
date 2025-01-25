@@ -1,90 +1,75 @@
-# quick-crud
+# faster-crud
 
-A dynamic CRUD library for Mongoose with CLI support, designed to streamline the creation of robust and efficient CRUD operations in Node.js applications.
+**Version**: 1.0.1
+**Author**: Mauro Ciappina
 
----
+## Description
+
+A dynamic CRUD library for Mongoose with CLI support
 
 ## Features
 
-- **Easy Setup:** Quickly integrate CRUD functionality into your project.
-- **CLI Support:** Automate tasks and manage configurations effortlessly.
-- **Mongoose Integration:** Simplifies working with MongoDB.
-- **Custom Middleware:** Easily apply global and route-specific middleware.
-- **Dynamic Configuration:** Customize behavior via `crud.config.js`.
-
----
+- Dynamic CRUD operations using Mongoose
+- Command Line Interface (CLI) for easy setup and operations
+- Supports advanced configuration via `crud.config.js`
+- Includes middleware support (e.g., rate limiting, input sanitization)
+- Automatically generates API documentation using Swagger
 
 ## Installation
 
-Install the library via NPM:
+To install the library, run:
 
 ```bash
-npm install quick-crud
-
+npm install faster-crud
 ```
 
-Basic Setup 1. Import the library in your project:
-import quickCRUD from 'quick-crud';
+## Usage
 
-2. Configure your CRUD operations in crud.config.js:
-   export default {
-   models: ["user", "product"],
-   middleware: [(req, res, next) => { console.log("Middleware applied"); next(); }],
-   };
+### Import the Library
 
-   3.Start the server:
+```javascript
+import fasterCrud from "faster-crud";
+// Initialize the library
+fasterCrud.initialize();
+```
 
-   import express from 'express';
-   import quickCRUD from 'quick-crud';
+### Running the CLI
 
-const app = express();
+The library provides a CLI for easier management:
 
-quickCRUD(app);
+```bash
+faster-crud
+```
 
-app.listen(3000, () => {
-console.log('Server is running on port 3000');
-});
-CLI Commands
+## Dependencies
 
-Run the following commands for streamlined operations:
-• Initialize Configuration
-quick-crud init
+The library uses the following dependencies:
+{
+"@faker-js/faker": "^8.4.1",
+"axios": "^1.7.9",
+"dotenv": "^16.4.7",
+"express": "^4.21.2",
+"express-mongo-sanitize": "^2.2.0",
+"express-rate-limit": "^7.5.0",
+"helmet": "^8.0.0",
+"inquirer": "^9.3.7",
+"joi": "^17.13.3",
+"mongoose": "^6.13.8",
+"swagger-ui-express": "^5.0.1"
+}
 
-Generate Models
+### Development Dependencies
 
-quick-crud generate modelName
-Configuration
+{
+"jest": "^29.7.0",
+"supertest": "^7.0.0"
+}
 
-The crud.config.js file allows you to define the behavior of your CRUD operations:
+## API Documentation
 
-export default {
-databaseUrl: "mongodb://localhost:27017/quick-crud",
-models: ["user", "product", "order"],
-middleware: [],
-};
+API documentation is auto-generated using Swagger. Access it at `/api-docs` when running your
+application.
 
-Fields:
-• databaseUrl: MongoDB connection string.
-• models: Array of model names to generate.
-• middleware: Array of middleware functions to apply globally.
+## License
 
-Dependencies
-
-This library uses the following dependencies:
-• express: HTTP framework.
-• mongoose: MongoDB object modeling.
-• inquirer: CLI prompts.
-• axios: For HTTP requests.
-• @faker-js/faker: Generate fake data for testing.
-
-Contributing
-
-Feel free to fork this project and submit pull requests. All contributions are welcome!
-
-License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-Author
-
-Mauro Ciappina
+This project is licensed under the MIT License.

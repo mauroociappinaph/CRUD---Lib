@@ -57,10 +57,45 @@ async function runCLI() {
 }
 
 // Función para listar todos los usuarios
+// Función para listar todos los usuarios con paginación y filtros
 async function handleGetAll() {
+  // Solicitar parámetros de paginación y filtro al usuario
+  const { page, limit, search } = await inquirer.prompt([
+    {
+      type: "input",
+      name: "page",
+      message: "¿Qué página deseas ver?",
+      default: 1,
+    },
+    {
+      type: "input",
+      name: "limit",
+      message: "¿Cuántos usuarios por página?",
+      default: 5,
+    },
+    {
+      type: "input",
+      name: "search",
+      message: "Buscar por nombre (opcional):",
+      default: "",
+    },
+  ]);
+
   try {
-    const response = await axios.get(API_URL);
-    console.log("📋 Usuarios encontrados:", response.data);
+    console.log("📤 Solicitando datos al servidor...");
+    // Enviar solicitud al backend con los parámetros de consulta
+    const response = await axios.get(API_URL, {
+      params: {
+        page,
+        limit,
+        search, // Pasar el término de búsqueda
+      },
+    });
+
+    // Mostrar resultados en la consola
+    console.log(`📋 Página ${response.data.page}/${response.data.totalPages}`);
+    console.log("Usuarios encontrados:");
+    console.table(response.data.data); // Mostrar los usuarios en formato tabla
   } catch (err) {
     console.error("❌ Error al obtener usuarios:", err.message);
   }

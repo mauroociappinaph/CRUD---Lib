@@ -89,15 +89,39 @@ if (config.routes && config.routes.users) {
   console.log(`✅ Configurando rutas en ${basePath}...`);
 
   // Ruta GET (Listar usuarios)
+  // Ruta GET (Listar usuarios) con paginación y filtros
   app.get(basePath, async (req, res) => {
     console.log(`📥 Solicitud GET recibida en ${basePath}`);
+    const { page = 1, limit = 10, search = "" } = req.query;
+
     try {
-      const users = await User.find().select("name email"); // Filtra campos sensibles
-      console.log(`📋 Usuarios encontrados: ${users.length}`);
-      res.json(users);
+      // Crear el filtro de búsqueda (opcional)
+      const query = search ? { name: { $regex: search, $options: "i" } } : {};
+
+      // Paginación y proyección
+      const users = await User.find(query)
+        .skip((page - 1) * limit)
+        .limit(Number(limit))
+        .select("name email");
+
+      // Contar el total de usuarios para el filtro
+      const total = await User.countDocuments(query);
+
+      // Responder con datos paginados
+      res.json({
+        data: users,
+        total,
+        page: Number(page),
+        totalPages: Math.ceil(total / limit),
+      });
+      console.log(
+        `📋 Página ${page}/${Math.ceil(total / limit)}, Usuarios: ${
+          users.length
+        }`
+      );
     } catch (err) {
       console.error("❌ Error al obtener usuarios:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Error al obtener usuarios." });
     }
   });
 
