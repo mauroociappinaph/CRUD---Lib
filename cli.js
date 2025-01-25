@@ -59,7 +59,6 @@ async function runCLI() {
 // Función para listar todos los usuarios
 // Función para listar todos los usuarios con paginación y filtros
 async function handleGetAll() {
-  // Solicitar parámetros de paginación y filtro al usuario
   const { page, limit, search } = await inquirer.prompt([
     {
       type: "input",
@@ -83,49 +82,48 @@ async function handleGetAll() {
 
   try {
     console.log("📤 Solicitando datos al servidor...");
-    // Enviar solicitud al backend con los parámetros de consulta
     const response = await axios.get(API_URL, {
-      params: {
-        page,
-        limit,
-        search, // Pasar el término de búsqueda
-      },
+      params: { page, limit, search },
     });
 
-    // Mostrar resultados en la consola
-    console.log(`📋 Página ${response.data.page}/${response.data.totalPages}`);
-    console.log("Usuarios encontrados:");
-    console.table(response.data.data); // Mostrar los usuarios en formato tabla
+    const data = Array.isArray(response.data)
+      ? response.data
+      : response.data.data || [];
+    if (!data.length) {
+      console.log("⚠️ No se encontraron usuarios.");
+      return;
+    }
+
+    console.log(`📋 Usuarios encontrados (${data.length} resultados):`);
+    console.table(data);
   } catch (err) {
     console.error("❌ Error al obtener usuarios:", err.message);
   }
 }
-
 // Función para obtener un usuario por ID
 async function handleGetById() {
+  console.log("🔍 Iniciando proceso para obtener usuario por ID...");
   let users = [];
+
   try {
+    console.log("📤 Solicitando lista de usuarios al servidor...");
     const response = await axios.get(API_URL);
-    console.log("📋 Respuesta de la API:", response.data); // Inspeccionar respuesta
-    users = Array.isArray(response.data)
-      ? response.data
-      : response.data.data || [];
+    users = Array.isArray(response.data) ? response.data : [];
   } catch (err) {
     console.error("❌ Error al obtener los usuarios:", err.message);
     return;
   }
 
-  if (!Array.isArray(users) || users.length === 0) {
+  if (!users.length) {
     console.log("⚠️ No hay usuarios disponibles.");
     return;
   }
 
+  console.log(`🔢 Usuarios disponibles: ${users.length}`);
   const userOptions = users.map((user) => ({
     name: `${user.name} (ID: ${user._id})`,
     value: user._id,
   }));
-
-  userOptions.push({ name: "Go Back", value: "goBack" });
 
   const { id } = await inquirer.prompt([
     {
@@ -136,8 +134,7 @@ async function handleGetById() {
     },
   ]);
 
-  if (id === "goBack") return;
-
+  console.log(`🆔 Solicitando detalles del usuario con ID: ${id}`);
   try {
     const response = await axios.get(`${API_URL}/${id}`);
     console.log("📋 Detalles del usuario:", response.data);
