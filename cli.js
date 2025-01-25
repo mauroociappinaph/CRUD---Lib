@@ -2,10 +2,13 @@
 import inquirer from "inquirer";
 import axios from "axios";
 import { faker } from "@faker-js/faker";
-import { loadCache } from "./lib/schemaUtils.js";
+import {
+  loadCache,
+  saveCache,
+  addMissingFieldsBasedOnSchema,
+} from "./lib/schemaCache.js";
 
-const API_URL = "http://127.0.0.1:3000";
-
+const API_URL = "http://localhost:3000/api/users";
 // Función principal del CLI
 async function runCLI() {
   console.log("💻 Bienvenido al CLI Interactivo para CRUD");
@@ -53,20 +56,56 @@ async function runCLI() {
   }
 }
 
-// Manejo de operaciones CRUD
+// Función para listar todos los usuarios
+// Función para listar todos los usuarios con paginación y filtros
 async function handleGetAll() {
+  // Solicitar parámetros de paginación y filtro al usuario
+  const { page, limit, search } = await inquirer.prompt([
+    {
+      type: "input",
+      name: "page",
+      message: "¿Qué página deseas ver?",
+      default: 1,
+    },
+    {
+      type: "input",
+      name: "limit",
+      message: "¿Cuántos usuarios por página?",
+      default: 5,
+    },
+    {
+      type: "input",
+      name: "search",
+      message: "Buscar por nombre (opcional):",
+      default: "",
+    },
+  ]);
+
   try {
-    const response = await axios.get(`${API_URL}/users`);
-    console.log("📋 Usuarios encontrados:", response.data);
+    console.log("📤 Solicitando datos al servidor...");
+    // Enviar solicitud al backend con los parámetros de consulta
+    const response = await axios.get(API_URL, {
+      params: {
+        page,
+        limit,
+        search, // Pasar el término de búsqueda
+      },
+    });
+
+    // Mostrar resultados en la consola
+    console.log(`📋 Página ${response.data.page}/${response.data.totalPages}`);
+    console.log("Usuarios encontrados:");
+    console.table(response.data.data); // Mostrar los usuarios en formato tabla
   } catch (err) {
     console.error("❌ Error al obtener usuarios:", err.message);
   }
 }
 
+// Función para obtener un usuario por ID
 async function handleGetById() {
   let users;
   try {
-    const response = await axios.get(`${API_URL}/users`);
+    const response = await axios.get(API_URL);
     users = response.data;
   } catch (err) {
     console.error("❌ Error al obtener los usuarios:", err.message);
@@ -97,14 +136,26 @@ async function handleGetById() {
   if (id === "goBack") return;
 
   try {
-    const response = await axios.get(`${API_URL}/users/${id}`);
+    const response = await axios.get(`${API_URL}/${id}`);
     console.log("📋 Detalles del usuario:", response.data);
   } catch (err) {
     console.error("❌ Error al obtener el usuario:", err.message);
   }
 }
 
+// Función para crear un usuario
+
 async function handleCreate() {
+  console.log("🛠️ Iniciando creación de usuario...");
+
+  // Cargar el esquema desde el cache
+  console.log("🔍 Cargando esquema desde el cache...");
+  const schemaCache = loadCache();
+
+  if (!schemaCache["User"]) {
+    console.warn("⚠️ No se encontró el esquema para 'User' en el cache.");
+  }
+
   const { autoGenerate } = await inquirer.prompt([
     {
       type: "confirm",
@@ -113,50 +164,75 @@ async function handleCreate() {
     },
   ]);
 
-  if (!autoGenerate) {
-    // Pedir datos manuales como antes
-    return;
+  let userData;
+
+  if (autoGenerate) {
+    userData = {
+      name: faker.lorem.words(2),
+      email: faker.internet.email(),
+      age: faker.number.int({ min: 1, max: 100 }),
+      address: faker.location.streetAddress(),
+      isActive: faker.datatype.boolean(),
+      password: faker.internet.password(), // Generar automáticamente el password
+    };
+
+    // Completar campos faltantes basados en el esquema
+    userData = addMissingFieldsBasedOnSchema(userData);
+    console.log("🔧 Datos generados automáticamente:", userData);
+  } else {
+    const { name, email, age, address, isActive } = await inquirer.prompt([
+      { type: "input", name: "name", message: "Nombre del usuario:" },
+      { type: "input", name: "email", message: "Email del usuario:" },
+      { type: "input", name: "age", message: "Edad del usuario:" },
+      { type: "input", name: "address", message: "Dirección del usuario:" },
+      {
+        type: "confirm",
+        name: "isActive",
+        message: "¿El usuario está activo?",
+        default: true,
+      },
+    ]);
+
+    // Generar automáticamente el password incluso para datos manuales
+    userData = {
+      name,
+      email,
+      age: parseInt(age),
+      address,
+      isActive,
+      password: faker.internet.password(), // Generar automáticamente el password
+    };
+
+    // Completar campos faltantes basados en el esquema
+    userData = addMissingFieldsBasedOnSchema(userData);
+    console.log("📥 Datos ingresados manualmente:", userData);
   }
-
-  // Leer el cache para obtener el esquema
-  const schemaCache = loadCache();
-  const userSchema = schemaCache["User"];
-
-  // Generar datos dinámicamente basados en el esquema
-  const userData = {};
-  for (const [key, value] of Object.entries(userSchema)) {
-    if (key === "_id" || key === "__v") continue; // Ignorar campos internos
-
-    switch (value.instance) {
-      case "String":
-        userData[key] = faker.lorem.words(2); // Generar texto aleatorio
-        break;
-      case "Number":
-        userData[key] = faker.datatype.number({ min: 1, max: 100 }); // Número aleatorio
-        break;
-      case "Boolean":
-        userData[key] = faker.datatype.boolean(); // Valor booleano aleatorio
-        break;
-      default:
-        console.log(`⚠️ Tipo no soportado: ${value.instance}`);
-    }
-  }
-
-  console.log("🔧 Datos generados automáticamente:", userData);
 
   try {
-    const response = await axios.post("http://127.0.0.1:3000/users", userData);
+    console.log("📤 Enviando datos al servidor para crear usuario...");
+    const response = await axios.post(API_URL, userData);
     console.log("✅ Usuario creado:", response.data);
+
+    // Actualizar el cache si el esquema cambia en el servidor
+    if (response.data.updatedSchema) {
+      console.log("♻️ Actualizando el cache con el nuevo esquema...");
+      schemaCache["User"] = response.data.updatedSchema; // Simula una respuesta con esquema actualizado
+      saveCache(schemaCache);
+      console.log("✅ Cache actualizado.");
+    }
   } catch (err) {
     console.error(`❌ Error al crear el usuario: ${err.message}`);
   }
 }
-
 async function handleUpdate() {
+  console.log("🛠️ Iniciando actualización de usuario...");
   let users;
+
   try {
-    const response = await axios.get("http://127.0.0.1:3000/users");
+    console.log("📤 Solicitando lista de usuarios al servidor...");
+    const response = await axios.get(`${API_URL}`);
     users = response.data;
+    console.log("📋 Lista de usuarios obtenida:", users);
   } catch (err) {
     console.error("❌ Error al obtener los usuarios:", err.message);
     return;
@@ -172,6 +248,8 @@ async function handleUpdate() {
     value: user._id,
   }));
 
+  userOptions.push({ name: "Go Back", value: "goBack" });
+
   const { id } = await inquirer.prompt([
     {
       type: "list",
@@ -180,6 +258,8 @@ async function handleUpdate() {
       choices: userOptions,
     },
   ]);
+
+  if (id === "goBack") return;
 
   const { autoGenerate } = await inquirer.prompt([
     {
@@ -190,56 +270,63 @@ async function handleUpdate() {
     },
   ]);
 
-  if (!autoGenerate) {
-    // Pedir datos manuales como antes
-    return;
-  }
+  let updateData;
 
-  // Leer el cache para obtener el esquema
-  const schemaCache = loadCache();
-  const userSchema = schemaCache["User"];
-
-  // Generar datos dinámicamente basados en el esquema
-  const updateData = {};
-  for (const [key, value] of Object.entries(userSchema)) {
-    if (key === "_id" || key === "__v") continue; // Ignorar campos internos
-
-    switch (value.instance) {
-      case "String":
-        updateData[key] = faker.lorem.words(2); // Generar texto aleatorio
-        break;
-      case "Number":
-        updateData[key] = faker.datatype.number({ min: 1, max: 100 }); // Número aleatorio
-        break;
-      case "Boolean":
-        updateData[key] = faker.datatype.boolean(); // Valor booleano aleatorio
-        break;
-      default:
-        console.log(`⚠️ Tipo no soportado: ${value.instance}`);
-    }
-  }
-
-  console.log(
-    "🔧 Datos generados automáticamente para la actualización:",
-    updateData
-  );
-
-  try {
-    const response = await axios.put(
-      `http://127.0.0.1:3000/users/${id}`,
+  if (autoGenerate) {
+    updateData = {
+      name: faker.name.fullName(),
+      email: faker.internet.email(),
+      age: faker.number.int({ min: 18, max: 80 }),
+      address: faker.address.streetAddress(),
+      isActive: faker.datatype.boolean(),
+    };
+    console.log(
+      "🔧 Datos generados automáticamente para la actualización:",
       updateData
     );
-    console.log("✅ Usuario actualizado:", response.data);
+  } else {
+    const { name, email, age, address, isActive } = await inquirer.prompt([
+      { type: "input", name: "name", message: "Nuevo nombre del usuario:" },
+      { type: "input", name: "email", message: "Nuevo email del usuario:" },
+      { type: "input", name: "age", message: "Nueva edad del usuario:" },
+      {
+        type: "input",
+        name: "address",
+        message: "Nueva dirección del usuario:",
+      },
+      {
+        type: "confirm",
+        name: "isActive",
+        message: "¿El usuario está activo?",
+        default: true,
+      },
+    ]);
+    updateData = { name, email, age: parseInt(age), address, isActive };
+    console.log(
+      "📥 Datos ingresados manualmente para la actualización:",
+      updateData
+    );
+  }
+
+  try {
+    console.log(
+      `📤 Enviando solicitud de actualización al servidor para ID ${id}...`
+    );
+    const response = await axios.put(`${API_URL}/${id}`, updateData);
+    console.log("✅ Usuario actualizado exitosamente:", response.data);
   } catch (err) {
     console.error(`❌ Error al actualizar el usuario: ${err.message}`);
   }
 }
-
 async function handleDelete() {
+  console.log("🛠️ Iniciando eliminación de usuario...");
   let users;
+
   try {
-    const response = await axios.get(`${API_URL}/users`);
+    console.log("📤 Solicitando lista de usuarios al servidor...");
+    const response = await axios.get(`${API_URL}`);
     users = response.data;
+    console.log("📋 Lista de usuarios obtenida:", users);
   } catch (err) {
     console.error("❌ Error al obtener los usuarios:", err.message);
     return;
@@ -268,13 +355,28 @@ async function handleDelete() {
 
   if (id === "goBack") return;
 
+  const { confirmDelete } = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "confirmDelete",
+      message: `¿Estás seguro de que deseas eliminar al usuario con ID ${id}?`,
+    },
+  ]);
+
+  if (!confirmDelete) {
+    console.log("❌ Eliminación cancelada.");
+    return;
+  }
+
   try {
-    await axios.delete(`${API_URL}/users/${id}`);
+    console.log(
+      `📤 Enviando solicitud de eliminación al servidor para ID ${id}...`
+    );
+    await axios.delete(`${API_URL}/${id}`);
     console.log("✅ Usuario eliminado exitosamente.");
   } catch (err) {
     console.error(`❌ Error al eliminar el usuario: ${err.message}`);
   }
 }
 
-// Ejecutar el CLI
 runCLI();

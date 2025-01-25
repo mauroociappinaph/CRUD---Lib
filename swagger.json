@@ -1,0 +1,48 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "API CRUD",
+    "description": "Documentación de la API CRUD"
+  },
+  "host": "localhost:3000",
+  "basePath": "/",
+  "schemes": ["http"],
+  "paths": {
+    "/api/users": {
+      "get": {
+        "summary": "Obtiene todos los usuarios",
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios obtenida correctamente"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crea un nuevo usuario",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Datos del usuario",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "email": { "type": "string" },
+                "password": { "type": "string" }
+              },
+              "required": ["name", "email", "password"]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Usuario creado correctamente"
+          }
+        }
+      }
+    }
+  }
+}

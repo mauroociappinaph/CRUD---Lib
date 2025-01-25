@@ -1,10 +1,13 @@
 {
-  "name": "my-crud-lib",
-  "version": "1.0.0",
+  "name": "faster-crud",
+  "version": "1.0.1",
   "description": "A dynamic CRUD library for Mongoose with CLI support",
   "main": "index.js",
   "bin": {
-    "crud-tester": "./cli.js"
+    "faster-crud": "cli.js"
+  },
+  "scripts": {
+    "test": "jest"
   },
   "type": "module",
   "keywords": [
@@ -13,13 +16,36 @@
     "Node.js",
     "CLI"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mauroociappinaph/CRUD---Lib.git"
+  },
   "author": "Mauro Ciappina",
   "license": "MIT",
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
     "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
     "inquirer": "^9.3.7",
-    "mongoose": "^6.13.8"
+    "joi": "^17.13.3",
+    "mongoose": "^6.13.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "files": [
+    "index.js",
+    "cli.js",
+    "lib/",
+    "crud.config.js"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
   }
 }
