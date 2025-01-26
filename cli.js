@@ -1,386 +1,346 @@
-#!/usr/bin/env node
 import inquirer from "inquirer";
+import schemas from "./lib/models/schemas.js"; // Importar todos los esquemas
+import { addMissingFieldsBasedOnSchema } from "./lib/schemaCache.js"; // Función para completar campos
 import axios from "axios";
-import { faker } from "@faker-js/faker";
-import {
-  loadCache,
-  saveCache,
-  addMissingFieldsBasedOnSchema,
-} from "./lib/schemaCache.js";
 
-const API_URL = "http://localhost:3000/api/users";
-// Función principal del CLI
+const API_URL = "http://localhost:3000/api"; // Cambiar según tu configuración
+
 async function runCLI() {
   console.log("💻 Bienvenido al CLI Interactivo para CRUD");
+  console.log("📂 Esquemas disponibles:", Object.keys(schemas)); // Log de los esquemas disponibles
 
-  while (true) {
-    const { operation } = await inquirer.prompt([
-      {
-        type: "list",
-        name: "operation",
-        message: "¿Qué operación deseas realizar?",
-        choices: [
-          "GET (Listar)",
-          "GET (Por ID)",
-          "POST (Crear)",
-          "PUT (Actualizar)",
-          "DELETE (Eliminar)",
-          "Exit",
-        ],
-      },
-    ]);
+  // Seleccionar el esquema (tabla)
+  const { selectedSchema } = await inquirer.prompt([
+    {
+      type: "list",
+      name: "selectedSchema",
+      message: "¿Sobre qué tabla deseas operar?",
+      choices: Object.keys(schemas), // Ejemplo: ['User', 'Product']
+    },
+  ]);
 
-    // Ejecutar la operación seleccionada
-    switch (operation) {
-      case "GET (Listar)":
-        await handleGetAll();
-        break;
-      case "GET (Por ID)":
-        await handleGetById();
-        break;
-      case "POST (Crear)":
-        await handleCreate();
-        break;
-      case "PUT (Actualizar)":
-        await handleUpdate();
-        break;
-      case "DELETE (Eliminar)":
-        await handleDelete();
-        break;
-      case "Exit":
-        console.log("👋 Gracias por usar el CLI. ¡Hasta pronto!");
-        process.exit(0);
-      default:
-        console.log("❌ Operación no válida.");
+  console.log(`📌 Esquema seleccionado: ${selectedSchema}`);
+
+  // Preguntar qué operación CRUD desea realizar
+  const { operation } = await inquirer.prompt([
+    {
+      type: "list",
+      name: "operation",
+      message: "¿Qué operación deseas realizar?",
+      choices: [
+        "GET (Listar)",
+        "GET (Por ID)",
+        "POST (Crear)",
+        "PUT (Actualizar)",
+        "DELETE (Eliminar)",
+        "Exit",
+      ],
+    },
+  ]);
+
+  console.log(`⚙️ Operación seleccionada: ${operation}`);
+
+  // Procesar la operación seleccionada
+  switch (operation) {
+    case "GET (Listar)":
+      await handleGetAll(selectedSchema);
+      break;
+    case "GET (Por ID)":
+      await handleGetById(selectedSchema);
+      break;
+    case "POST (Crear)":
+      await handleCreate(selectedSchema);
+      break;
+    case "PUT (Actualizar)":
+      await handleUpdate(selectedSchema);
+      break;
+    case "DELETE (Eliminar)":
+      await handleDelete(selectedSchema);
+      break;
+    case "Exit":
+      console.log("👋 Gracias por usar el CLI. ¡Hasta pronto!");
+      process.exit();
+  }
+
+  // Volver al menú principal
+  console.log("🔄 Regresando al menú principal...");
+  runCLI();
+}
+
+// Manejo de operaciones CRUD dinámicas
+async function handleGetAll(schemaName) {
+  console.log(`📋 Obteniendo todos los registros de ${schemaName}...`);
+  const url = `${API_URL}/${schemaName.toLowerCase()}s`;
+  console.log(`🌐 URL de la solicitud: ${url}`);
+
+  try {
+    const response = await axios.get(url);
+    console.log(`✅ Datos obtenidos (${schemaName}):`, response.data);
+  } catch (error) {
+    console.error(`❌ Error al listar ${schemaName}s:`, error.message);
+    if (error.response) {
+      console.error("📋 Detalles del error:", error.response.data);
     }
   }
 }
 
-// Función para listar todos los usuarios
-// Función para listar todos los usuarios con paginación y filtros
-async function handleGetAll() {
-  const { page, limit, search } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "page",
-      message: "¿Qué página deseas ver?",
-      default: 1,
-    },
-    {
-      type: "input",
-      name: "limit",
-      message: "¿Cuántos usuarios por página?",
-      default: 5,
-    },
-    {
-      type: "input",
-      name: "search",
-      message: "Buscar por nombre (opcional):",
-      default: "",
-    },
-  ]);
+async function handleGetById(schemaName) {
+  console.log(
+    `📋 Obteniendo todos los registros de ${schemaName} para seleccionar por nombre...`
+  );
+
+  const url = `${API_URL}/${schemaName.toLowerCase()}s`;
+  console.log(`🌐 URL de la solicitud: ${url}`);
 
   try {
-    console.log("📤 Solicitando datos al servidor...");
-    const response = await axios.get(API_URL, {
-      params: { page, limit, search },
-    });
+    // Obtener todos los registros
+    const response = await axios.get(url);
+    const records = response.data;
 
-    const data = Array.isArray(response.data)
-      ? response.data
-      : response.data.data || [];
-    if (!data.length) {
-      console.log("⚠️ No se encontraron usuarios.");
+    // Verificar si hay registros disponibles
+    if (!records || records.length === 0) {
+      console.log(`⚠️ No se encontraron registros para ${schemaName}.`);
       return;
     }
 
-    console.log(`📋 Usuarios encontrados (${data.length} resultados):`);
-    console.table(data);
-  } catch (err) {
-    console.error("❌ Error al obtener usuarios:", err.message);
-  }
-}
-// Función para obtener un usuario por ID
-async function handleGetById() {
-  console.log("🔍 Iniciando proceso para obtener usuario por ID...");
-  let users = [];
+    // Crear opciones para selección
+    const options = records.map((record) => ({
+      name: `${record.name} (ID: ${record._id})`,
+      value: record._id,
+    }));
 
-  try {
-    console.log("📤 Solicitando lista de usuarios al servidor...");
-    const response = await axios.get(API_URL);
-    users = Array.isArray(response.data) ? response.data : [];
-  } catch (err) {
-    console.error("❌ Error al obtener los usuarios:", err.message);
-    return;
-  }
-
-  if (!users.length) {
-    console.log("⚠️ No hay usuarios disponibles.");
-    return;
-  }
-
-  console.log(`🔢 Usuarios disponibles: ${users.length}`);
-  const userOptions = users.map((user) => ({
-    name: `${user.name} (ID: ${user._id})`,
-    value: user._id,
-  }));
-
-  const { id } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "id",
-      message: "Selecciona un usuario para ver:",
-      choices: userOptions,
-    },
-  ]);
-
-  console.log(`🆔 Solicitando detalles del usuario con ID: ${id}`);
-  try {
-    const response = await axios.get(`${API_URL}/${id}`);
-    console.log("📋 Detalles del usuario:", response.data);
-  } catch (err) {
-    console.error("❌ Error al obtener el usuario:", err.message);
-  }
-}
-
-// Función para crear un usuario
-
-async function handleCreate() {
-  console.log("🛠️ Iniciando creación de usuario...");
-
-  // Cargar el esquema desde el cache
-  console.log("🔍 Cargando esquema desde el cache...");
-  const schemaCache = loadCache();
-
-  if (!schemaCache["User"]) {
-    console.warn("⚠️ No se encontró el esquema para 'User' en el cache.");
-  }
-
-  const { autoGenerate } = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "autoGenerate",
-      message: "¿Quieres generar automáticamente los datos del usuario?",
-    },
-  ]);
-
-  let userData;
-
-  if (autoGenerate) {
-    userData = {
-      name: faker.lorem.words(2),
-      email: faker.internet.email(),
-      age: faker.number.int({ min: 1, max: 100 }),
-      address: faker.location.streetAddress(),
-      isActive: faker.datatype.boolean(),
-      password: faker.internet.password(), // Generar automáticamente el password
-    };
-
-    // Completar campos faltantes basados en el esquema
-    userData = addMissingFieldsBasedOnSchema(userData);
-    console.log("🔧 Datos generados automáticamente:", userData);
-  } else {
-    const { name, email, age, address, isActive } = await inquirer.prompt([
-      { type: "input", name: "name", message: "Nombre del usuario:" },
-      { type: "input", name: "email", message: "Email del usuario:" },
-      { type: "input", name: "age", message: "Edad del usuario:" },
-      { type: "input", name: "address", message: "Dirección del usuario:" },
+    // Permitir al usuario seleccionar un registro
+    const { id } = await inquirer.prompt([
       {
-        type: "confirm",
-        name: "isActive",
-        message: "¿El usuario está activo?",
-        default: true,
+        type: "list",
+        name: "id",
+        message: `Selecciona un ${schemaName} por su nombre:`,
+        choices: options,
       },
     ]);
 
-    // Generar automáticamente el password incluso para datos manuales
-    userData = {
-      name,
-      email,
-      age: parseInt(age),
-      address,
-      isActive,
-      password: faker.internet.password(), // Generar automáticamente el password
-    };
+    console.log(`🔍 Obteniendo detalles del ${schemaName} con ID: ${id}`);
 
-    // Completar campos faltantes basados en el esquema
-    userData = addMissingFieldsBasedOnSchema(userData);
-    console.log("📥 Datos ingresados manualmente:", userData);
-  }
+    // Realizar solicitud para obtener el detalle por ID
+    const detailUrl = `${API_URL}/${schemaName.toLowerCase()}s/${id}`;
+    const detailResponse = await axios.get(detailUrl);
 
-  try {
-    console.log("📤 Enviando datos al servidor para crear usuario...");
-    const response = await axios.post(API_URL, userData);
-    console.log("✅ Usuario creado:", response.data);
-
-    // Actualizar el cache si el esquema cambia en el servidor
-    if (response.data.updatedSchema) {
-      console.log("♻️ Actualizando el cache con el nuevo esquema...");
-      schemaCache["User"] = response.data.updatedSchema; // Simula una respuesta con esquema actualizado
-      saveCache(schemaCache);
-      console.log("✅ Cache actualizado.");
+    console.log(`✅ Detalles del ${schemaName}:`, detailResponse.data);
+  } catch (error) {
+    console.error(`❌ Error al obtener el ${schemaName}:`, error.message);
+    if (error.response) {
+      console.error("📋 Detalles del error:", error.response.data);
     }
-  } catch (err) {
-    console.error(`❌ Error al crear el usuario: ${err.message}`);
   }
 }
-async function handleUpdate() {
-  console.log("🛠️ Iniciando actualización de usuario...");
-  let users = [];
 
-  try {
-    console.log("📤 Solicitando lista de usuarios al servidor...");
-    const response = await axios.get(API_URL);
-    console.log("📋 Respuesta de la API:", response.data); // Inspeccionar respuesta
-    users = Array.isArray(response.data)
-      ? response.data
-      : response.data.data || [];
-  } catch (err) {
-    console.error("❌ Error al obtener los usuarios:", err.message);
+async function handleCreate(schemaName) {
+  console.log(`🛠️ Creando un nuevo ${schemaName}...`);
+  const schema = schemas[schemaName]?.schema;
+
+  if (!schema) {
+    console.error(`❌ No se encontró el esquema para ${schemaName}.`);
     return;
   }
 
-  if (!Array.isArray(users) || users.length === 0) {
-    console.log("⚠️ No hay usuarios disponibles para actualizar.");
-    return;
-  }
-
-  const userOptions = users.map((user) => ({
-    name: `${user.name} (ID: ${user._id})`,
-    value: user._id,
-  }));
-
-  userOptions.push({ name: "Go Back", value: "goBack" });
-
-  const { id } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "id",
-      message: "Selecciona un usuario para actualizar:",
-      choices: userOptions,
-    },
-  ]);
-
-  if (id === "goBack") return;
-
-  const { autoGenerate } = await inquirer.prompt([
+  const autoGenerate = await inquirer.prompt([
     {
       type: "confirm",
       name: "autoGenerate",
-      message:
-        "¿Quieres generar automáticamente los datos para la actualización?",
+      message: `¿Quieres generar automáticamente los datos del ${schemaName}?`,
     },
   ]);
 
-  let updateData;
-
-  if (autoGenerate) {
-    updateData = {
-      name: faker.name.fullName(),
-      email: faker.internet.email(),
-      age: faker.number.int({ min: 18, max: 80 }),
-      address: faker.address.streetAddress(),
-      isActive: faker.datatype.boolean(),
-    };
-    console.log(
-      "🔧 Datos generados automáticamente para la actualización:",
-      updateData
-    );
+  let data;
+  if (autoGenerate.autoGenerate) {
+    console.log("🛠️ Generando datos automáticamente...");
+    data = addMissingFieldsBasedOnSchema({}, schema);
+    console.log("🔧 Datos generados automáticamente:", data);
   } else {
-    const { name, email, age, address, isActive } = await inquirer.prompt([
-      { type: "input", name: "name", message: "Nuevo nombre del usuario:" },
-      { type: "input", name: "email", message: "Nuevo email del usuario:" },
-      { type: "input", name: "age", message: "Nueva edad del usuario:" },
+    console.log("📝 Solicitando datos manualmente...");
+    data = {};
+    for (const field of Object.keys(schema.obj)) {
+      const { required, type } = schema.obj[field];
+      const typeInfo = type?.name || "String";
+      const answer = await inquirer.prompt([
+        {
+          type: "input",
+          name: field,
+          message: `Ingrese ${field} (${
+            required ? "requerido" : "opcional"
+          }, tipo: ${typeInfo}):`,
+        },
+      ]);
+      data[field] = answer[field];
+    }
+  }
+
+  console.log("📤 Enviando datos al servidor:", data);
+  const url = `${API_URL}/${schemaName.toLowerCase()}s`;
+  console.log(`🌐 URL de la solicitud: ${url}`);
+
+  try {
+    const response = await axios.post(url, data);
+    console.log(`✅ ${schemaName} creado:`, response.data);
+  } catch (error) {
+    console.error(`❌ Error al crear el ${schemaName}:`, error.message);
+    if (error.response) {
+      console.error("📋 Detalles del error:", error.response.data);
+    }
+  }
+}
+
+async function handleUpdate(schemaName) {
+  console.log(
+    `📋 Obteniendo todos los registros de ${schemaName} para seleccionar por nombre...`
+  );
+
+  const url = `${API_URL}/${schemaName.toLowerCase()}s`;
+  console.log(`🌐 URL de la solicitud: ${url}`);
+
+  try {
+    const response = await axios.get(url);
+    const records = response.data;
+
+    if (!records || records.length === 0) {
+      console.log(`⚠️ No se encontraron registros para ${schemaName}.`);
+      return;
+    }
+
+    const options = records.map((record) => ({
+      name: `${record.name} (ID: ${record._id})`,
+      value: record._id,
+    }));
+
+    const { id } = await inquirer.prompt([
       {
-        type: "input",
-        name: "address",
-        message: "Nueva dirección del usuario:",
-      },
-      {
-        type: "confirm",
-        name: "isActive",
-        message: "¿El usuario está activo?",
-        default: true,
+        type: "list",
+        name: "id",
+        message: `Selecciona un ${schemaName} a actualizar:`,
+        choices: options,
       },
     ]);
-    updateData = { name, email, age: parseInt(age), address, isActive };
-    console.log(
-      "📥 Datos ingresados manualmente para la actualización:",
-      updateData
-    );
-  }
 
-  try {
-    console.log(
-      `📤 Enviando solicitud de actualización al servidor para ID ${id}...`
+    console.log(`✏️ Actualizando ${schemaName} con ID: ${id}...`);
+    const schema = schemas[schemaName]?.schema;
+
+    if (!schema) {
+      console.error(`❌ No se encontró el esquema para ${schemaName}.`);
+      return;
+    }
+
+    const { autoGenerate } = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "autoGenerate",
+        message:
+          "¿Quieres generar automáticamente los datos para la actualización?",
+      },
+    ]);
+
+    let data;
+    if (autoGenerate) {
+      console.log("🛠️ Generando datos automáticamente...");
+      data = addMissingFieldsBasedOnSchema({}, schema);
+      console.log("🔧 Datos generados automáticamente:", data);
+    } else {
+      console.log("📝 Solicitando datos manualmente...");
+      data = {};
+      for (const field of Object.keys(schema.obj)) {
+        const { required, type } = schema.obj[field];
+        const typeInfo = type?.name || "String";
+        const answer = await inquirer.prompt([
+          {
+            type: "input",
+            name: field,
+            message: `Ingrese ${field} (${
+              required ? "requerido" : "opcional"
+            }, tipo: ${typeInfo}):`,
+          },
+        ]);
+        if (answer[field]) {
+          data[field] = answer[field];
+        }
+      }
+    }
+
+    console.log("📤 Enviando datos al servidor:", data);
+    const updateUrl = `${API_URL}/${schemaName.toLowerCase()}s/${id}`;
+    console.log(`🌐 URL de la solicitud: ${updateUrl}`);
+
+    try {
+      const response = await axios.put(updateUrl, data);
+      console.log(`✅ ${schemaName} actualizado:`, response.data);
+    } catch (error) {
+      console.error(`❌ Error al actualizar el ${schemaName}:`, error.message);
+      if (error.response) {
+        console.error("📋 Detalles del error:", error.response.data);
+      }
+    }
+  } catch (error) {
+    console.error(
+      `❌ Error al obtener registros para ${schemaName}:`,
+      error.message
     );
-    const response = await axios.put(`${API_URL}/${id}`, updateData);
-    console.log("✅ Usuario actualizado exitosamente:", response.data);
-  } catch (err) {
-    console.error(`❌ Error al actualizar el usuario: ${err.message}`);
+    if (error.response) {
+      console.error("📋 Detalles del error:", error.response.data);
+    }
   }
 }
-async function handleDelete() {
-  console.log("🛠️ Iniciando eliminación de usuario...");
-  let users = [];
+async function handleDelete(schemaName) {
+  console.log(
+    `📋 Obteniendo todos los registros de ${schemaName} para seleccionar por nombre...`
+  );
+
+  const url = `${API_URL}/${schemaName.toLowerCase()}s`;
+  console.log(`🌐 URL de la solicitud: ${url}`);
 
   try {
-    console.log("📤 Solicitando lista de usuarios al servidor...");
-    const response = await axios.get(API_URL);
-    console.log("📋 Respuesta de la API:", response.data); // Inspeccionar respuesta
-    users = Array.isArray(response.data)
-      ? response.data
-      : response.data.data || [];
-  } catch (err) {
-    console.error("❌ Error al obtener los usuarios:", err.message);
-    return;
-  }
+    const response = await axios.get(url);
+    const records = response.data;
 
-  if (!Array.isArray(users) || users.length === 0) {
-    console.log("⚠️ No hay usuarios disponibles para eliminar.");
-    return;
-  }
+    if (!records || records.length === 0) {
+      console.log(`⚠️ No se encontraron registros para ${schemaName}.`);
+      return;
+    }
 
-  const userOptions = users.map((user) => ({
-    name: `${user.name} (ID: ${user._id})`,
-    value: user._id,
-  }));
+    const options = records.map((record) => ({
+      name: `${record.name} (ID: ${record._id})`,
+      value: record._id,
+    }));
 
-  userOptions.push({ name: "Go Back", value: "goBack" });
+    const { id } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "id",
+        message: `Selecciona un ${schemaName} a eliminar:`,
+        choices: options,
+      },
+    ]);
 
-  const { id } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "id",
-      message: "Selecciona un usuario para eliminar:",
-      choices: userOptions,
-    },
-  ]);
+    console.log(`🗑️ Eliminando ${schemaName} con ID: ${id}`);
+    const deleteUrl = `${API_URL}/${schemaName.toLowerCase()}s/${id}`;
+    console.log(`🌐 URL de la solicitud: ${deleteUrl}`);
 
-  if (id === "goBack") return;
-
-  const { confirmDelete } = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "confirmDelete",
-      message: `¿Estás seguro de que deseas eliminar al usuario con ID ${id}?`,
-    },
-  ]);
-
-  if (!confirmDelete) {
-    console.log("❌ Eliminación cancelada.");
-    return;
-  }
-
-  try {
-    console.log(
-      `📤 Enviando solicitud de eliminación al servidor para ID ${id}...`
+    try {
+      const response = await axios.delete(deleteUrl);
+      console.log(`✅ ${schemaName} eliminado:`, response.data);
+    } catch (error) {
+      console.error(`❌ Error al eliminar el ${schemaName}:`, error.message);
+      if (error.response) {
+        console.error("📋 Detalles del error:", error.response.data);
+      }
+    }
+  } catch (error) {
+    console.error(
+      `❌ Error al obtener registros para ${schemaName}:`,
+      error.message
     );
-    await axios.delete(`${API_URL}/${id}`);
-    console.log("✅ Usuario eliminado exitosamente.");
-  } catch (err) {
-    console.error(`❌ Error al eliminar el usuario: ${err.message}`);
+    if (error.response) {
+      console.error("📋 Detalles del error:", error.response.data);
+    }
   }
 }
 
+// Iniciar el CLI
 runCLI();
