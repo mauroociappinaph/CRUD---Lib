@@ -4,11 +4,12 @@ import schema from "../lib/models/schemas.js"; // Importar el modelo de usuario
 
 const router = Router();
 
-// Crear rutas CRUD para usuarios
-router.use("/users", crudify(schema.User, "Usuario"));
-router.use("/companies", crudify(schema.Companie, "Compañia"));
-router.use("/products", crudify(schema.Product, "Producto"));
-router.use("/cards", crudify(schema.Card, "Card"));
-router.use("/subCategories", crudify(schema.SubCategorie, "SubCategoría"));
+// Iterar sobre los modelos y generar rutas CRUD dinámicas
+Object.keys(schema).forEach((modelName) => {
+  const model = schema[modelName];
+  const path = `/${modelName.toLowerCase()}s`; // Generar el path en plural
+  console.log(`📦 Generando CRUD para: ${modelName}, ruta: ${path}`);
+  router.use(path, crudify(model, modelName));
+});
 
 export default router;
