@@ -9,6 +9,7 @@ const config = {
   middleware: [
     (req, res, next) => {
       console.log(`Request to: ${req.path}`);
+
       next();
     },
   ],

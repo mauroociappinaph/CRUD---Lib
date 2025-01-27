@@ -5,6 +5,14 @@ import axios from "axios";
 
 const API_URL = "http://localhost:3000/api"; // Cambiar según tu configuración
 
+/**
+ * CLI Interactivo para CRUD
+ * @description
+ * - Seleccionar un esquema (tabla) para operar
+ * - Seleccionar una operación CRUD para realizar
+ * - Procesar la operación seleccionada
+ * - Volver al menú principal
+ */
 async function runCLI() {
   console.log("💻 Bienvenido al CLI Interactivo para CRUD");
   console.log("📂 Esquemas disponibles:", Object.keys(schemas)); // Log de los esquemas disponibles
@@ -70,20 +78,84 @@ async function runCLI() {
 // Manejo de operaciones CRUD dinámicas
 async function handleGetAll(schemaName) {
   console.log(`📋 Obteniendo todos los registros de ${schemaName}...`);
-  const url = `${API_URL}/${schemaName.toLowerCase()}s`;
+
+  // Solicitar parámetros de paginación y filtros al usuario
+  const { page } = await inquirer.prompt([
+    {
+      type: "input",
+      name: "page",
+      message: "🔢 Ingresa el número de página (default 1):",
+      default: 1,
+      validate: (value) =>
+        !isNaN(value) && value > 0 ? true : "Debe ser un número positivo.",
+    },
+  ]);
+
+  const { limit } = await inquirer.prompt([
+    {
+      type: "input",
+      name: "limit",
+      message: "📏 Ingresa el límite de resultados por página (default 10):",
+      default: 10,
+      validate: (value) =>
+        !isNaN(value) && value > 0 ? true : "Debe ser un número positivo.",
+    },
+  ]);
+
+  const { filters } = await inquirer.prompt([
+    {
+      type: "input",
+      name: "filters",
+      message: '🔍 Ingresa los filtros en formato JSON (ej: {"name": "John"}):',
+      default: "{}",
+      validate: (value) => {
+        try {
+          JSON.parse(value);
+          return true;
+        } catch {
+          return "Debe ser un JSON válido.";
+        }
+      },
+    },
+  ]);
+
+  // Parsear filtros
+  const parsedFilters = JSON.parse(filters);
+
+  // Construir la URL con parámetros de consulta
+  const queryParams = new URLSearchParams({
+    page,
+    limit,
+    ...parsedFilters,
+  }).toString();
+  const url = `${API_URL}/${schemaName.toLowerCase()}s?${queryParams}`;
   console.log(`🌐 URL de la solicitud: ${url}`);
 
   try {
+    // Realizar la solicitud GET con los parámetros
     const response = await axios.get(url);
-    console.log(`✅ Datos obtenidos (${schemaName}):`, response.data);
+
+    // Mostrar los datos obtenidos y la información de paginación
+    console.log(
+      `✅ Datos obtenidos (${schemaName}):`,
+      response.data.documents || response.data
+    );
+    console.log(
+      `📄 Total de registros: ${response.data.totalDocuments || "Desconocido"}`
+    );
+    console.log(
+      `📄 Página actual: ${response.data.currentPage || "1"} / ${
+        response.data.totalPages || "1"
+      }`
+    );
   } catch (error) {
-    console.error(`❌ Error al listar ${schemaName}s:`, error.message);
+    console.error(`❌ Error al listar ${schemaName}:`, error.message);
+
     if (error.response) {
       console.error("📋 Detalles del error:", error.response.data);
     }
   }
 }
-
 async function handleGetById(schemaName) {
   console.log(
     `📋 Obteniendo todos los registros de ${schemaName} para seleccionar por nombre...`

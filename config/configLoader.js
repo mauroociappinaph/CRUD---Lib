@@ -4,17 +4,18 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Loads the configuration from the crud.config.js file.
- * 
- * This function attempts to import the configuration file located at '../crud.config.js'
- * relative to the current directory. If successful, it logs a success message and
- * returns the default export from the config file. If an error occurs during import,
- * it logs an error message and exits the process.
- * 
+ * Carga la configuración desde el archivo crud.config.js.
+ *
+ * Esta función intenta importar el archivo de configuración ubicado en '../crud.config.js',
+ * relativo al directorio actual. Si se realiza con éxito, se registra un mensaje de éxito
+ * en la consola y se devuelve la exportación predeterminada del archivo de configuración.
+ * Si ocurre un error durante la importación, se registra un mensaje de error y el proceso
+ * finaliza.
+ *
  * @async
  * @function loadConfig
- * @returns {Promise<Object>} The configuration object imported from crud.config.js.
- * @throws {Error} If the configuration file cannot be loaded, the process will exit with status code 1.
+ * @returns {Promise<Object>} El objeto de configuración importado desde crud.config.js.
+ * @throws {Error} Si no se puede cargar el archivo de configuración, el proceso finalizará con un código de estado 1.
  */
 export async function loadConfig() {
   const configPath = path.join(__dirname, "../crud.config.js");
