@@ -15,145 +15,182 @@ const API_URL = "http://localhost:3000/api"; // Cambiar según tu configuración
  */
 async function runCLI() {
   console.log("💻 Bienvenido al CLI Interactivo para CRUD");
-  console.log("📂 Esquemas disponibles:", Object.keys(schemas)); // Log de los esquemas disponibles
 
-  // Seleccionar el esquema (tabla)
-  const { selectedSchema } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "selectedSchema",
-      message: "¿Sobre qué tabla deseas operar?",
-      choices: Object.keys(schemas), // Ejemplo: ['User', 'Product']
-    },
-  ]);
+  while (true) {
+    console.log("📂 Esquemas disponibles:", Object.keys(schemas));
 
-  console.log(`📌 Esquema seleccionado: ${selectedSchema}`);
+    const { selectedSchema, operation } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "selectedSchema",
+        message: "¿Sobre qué tabla deseas operar?",
+        choices: Object.keys(schemas),
+      },
+      {
+        type: "list",
+        name: "operation",
+        message: "¿Qué operación deseas realizar?",
+        choices: [
+          "GET (Listar)",
+          "GET (Por ID)",
+          "POST (Crear)",
+          "PUT (Actualizar)",
+          "DELETE (Eliminar)",
+          "Exit",
+        ],
+      },
+    ]);
 
-  // Preguntar qué operación CRUD desea realizar
-  const { operation } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "operation",
-      message: "¿Qué operación deseas realizar?",
-      choices: [
-        "GET (Listar)",
-        "GET (Por ID)",
-        "POST (Crear)",
-        "PUT (Actualizar)",
-        "DELETE (Eliminar)",
-        "Exit",
-      ],
-    },
-  ]);
+    console.log(`📌 Esquema seleccionado: ${selectedSchema}`);
+    console.log(`⚙️ Operación seleccionada: ${operation}`);
 
-  console.log(`⚙️ Operación seleccionada: ${operation}`);
-
-  // Procesar la operación seleccionada
-  switch (operation) {
-    case "GET (Listar)":
-      await handleGetAll(selectedSchema);
-      break;
-    case "GET (Por ID)":
-      await handleGetById(selectedSchema);
-      break;
-    case "POST (Crear)":
-      await handleCreate(selectedSchema);
-      break;
-    case "PUT (Actualizar)":
-      await handleUpdate(selectedSchema);
-      break;
-    case "DELETE (Eliminar)":
-      await handleDelete(selectedSchema);
-      break;
-    case "Exit":
-      console.log("👋 Gracias por usar el CLI. ¡Hasta pronto!");
-      process.exit();
+    switch (operation) {
+      case "GET (Listar)":
+        await handleGetAll(selectedSchema);
+        break;
+      case "GET (Por ID)":
+        await handleGetById(selectedSchema);
+        break;
+      case "POST (Crear)":
+        await handleCreate(selectedSchema);
+        break;
+      case "PUT (Actualizar)":
+        await handleUpdate(selectedSchema);
+        break;
+      case "DELETE (Eliminar)":
+        await handleDelete(selectedSchema);
+        break;
+      case "Exit":
+        console.log("👋 Gracias por usar el CLI. ¡Hasta pronto!");
+        return;
+    }
   }
-
-  // Volver al menú principal
-  console.log("🔄 Regresando al menú principal...");
-  runCLI();
 }
 
 // Manejo de operaciones CRUD dinámicas
 async function handleGetAll(schemaName) {
   console.log(`📋 Obteniendo todos los registros de ${schemaName}...`);
 
-  // Solicitar parámetros de paginación y filtros al usuario
-  const { page } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "page",
-      message: "🔢 Ingresa el número de página (default 1):",
-      default: 1,
-      validate: (value) =>
-        !isNaN(value) && value > 0 ? true : "Debe ser un número positivo.",
-    },
-  ]);
+  let continuePagination = true;
 
-  const { limit } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "limit",
-      message: "📏 Ingresa el límite de resultados por página (default 10):",
-      default: 10,
-      validate: (value) =>
-        !isNaN(value) && value > 0 ? true : "Debe ser un número positivo.",
-    },
-  ]);
+  while (continuePagination) {
+    // Obtener la cantidad total de páginas y campos de filtro
+    const initialResponse = await axios.get(
+      `${API_URL}/${schemaName.toLowerCase()}s?page=1&limit=1`
+    );
+    const totalPages = Math.ceil(initialResponse.data.totalDocuments / 10); // Suponiendo un límite fijo de 10
+    const fields = Object.keys(initialResponse.data.documents[0] || {});
 
-  const { filters } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "filters",
-      message: '🔍 Ingresa los filtros en formato JSON (ej: {"name": "John"}):',
-      default: "{}",
-      validate: (value) => {
-        try {
-          JSON.parse(value);
-          return true;
-        } catch {
-          return "Debe ser un JSON válido.";
-        }
+    // Preguntar por el filtro
+    const { selectedField } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "selectedField",
+        message:
+          "🔍 Selecciona un campo para filtrar (o ninguno para omitir filtros):",
+        choices: ["Sin filtro", ...fields],
       },
-    },
-  ]);
+    ]);
 
-  // Parsear filtros
-  const parsedFilters = JSON.parse(filters);
+    let filterValue = null;
+    if (selectedField !== "Sin filtro") {
+      try {
+        // Obtener valores únicos del campo seleccionado
+        const uniqueValuesResponse = await axios.get(
+          `${API_URL}/${schemaName.toLowerCase()}s/unique?field=${selectedField}`
+        );
+        const uniqueValues = uniqueValuesResponse.data;
 
-  // Construir la URL con parámetros de consulta
-  const queryParams = new URLSearchParams({
-    page,
-    limit,
-    ...parsedFilters,
-  }).toString();
-  const url = `${API_URL}/${schemaName.toLowerCase()}s?${queryParams}`;
-  console.log(`🌐 URL de la solicitud: ${url}`);
-
-  try {
-    // Realizar la solicitud GET con los parámetros
-    const response = await axios.get(url);
-
-    // Mostrar los datos obtenidos y la información de paginación
-    console.log(
-      `✅ Datos obtenidos (${schemaName}):`,
-      response.data.documents || response.data
-    );
-    console.log(
-      `📄 Total de registros: ${response.data.totalDocuments || "Desconocido"}`
-    );
-    console.log(
-      `📄 Página actual: ${response.data.currentPage || "1"} / ${
-        response.data.totalPages || "1"
-      }`
-    );
-  } catch (error) {
-    console.error(`❌ Error al listar ${schemaName}:`, error.message);
-
-    if (error.response) {
-      console.error("📋 Detalles del error:", error.response.data);
+        // Seleccionar el valor del filtro
+        const { value } = await inquirer.prompt([
+          {
+            type: "list",
+            name: "value",
+            message: `🔍 Selecciona un valor para filtrar por ${selectedField}:`,
+            choices: uniqueValues,
+          },
+        ]);
+        filterValue = value;
+      } catch (error) {
+        console.error(
+          `❌ Error al obtener valores únicos para ${selectedField}:`,
+          error.message
+        );
+        continue;
+      }
     }
+
+    // Preguntar por la página
+    const { selectedPage } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "selectedPage",
+        message: "🔢 Selecciona una página:",
+        choices: Array.from({ length: totalPages }, (_, i) => i + 1),
+      },
+    ]);
+
+    // Construir filtros y parámetros
+    const filters = filterValue ? { [selectedField]: filterValue } : {};
+    const queryParams = new URLSearchParams({
+      page: selectedPage,
+      limit: 10,
+      ...filters,
+    }).toString();
+
+    // Construir la URL
+    const url = `${API_URL}/${schemaName.toLowerCase()}s?${queryParams}`;
+    console.log(`🌐 URL de la solicitud: ${url}`);
+
+    try {
+      // Realizar la solicitud GET
+      const response = await axios.get(url);
+
+      if (response.data.documents.length > 0) {
+        // Preguntar el formato de salida
+        const { outputFormat } = await inquirer.prompt([
+          {
+            type: "list",
+            name: "outputFormat",
+            message: "¿Cómo deseas ver los resultados?",
+            choices: ["JSON", "Tabla"],
+          },
+        ]);
+
+        // Mostrar los resultados en el formato seleccionado
+        if (outputFormat === "JSON") {
+          console.log("✅ Respuesta en formato JSON:");
+          console.log(JSON.stringify(response.data.documents, null, 2));
+        } else {
+          console.log("✅ Respuesta en formato tabla:");
+          console.table(response.data.documents);
+        }
+      } else {
+        console.log("⚠️ No se encontraron registros.");
+      }
+
+      console.log(`📄 Total de registros: ${response.data.totalDocuments}`);
+      console.log(
+        `📄 Página actual: ${response.data.currentPage} / ${response.data.totalPages}`
+      );
+    } catch (error) {
+      console.error(`❌ Error al listar ${schemaName}:`, error.message);
+
+      if (error.response) {
+        console.error("📋 Detalles del error:", error.response.data);
+      }
+    }
+
+    // Preguntar si el usuario desea continuar paginando
+    const { doContinue } = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "doContinue",
+        message: "¿Quieres seleccionar otra página o aplicar otro filtro?",
+        default: true,
+      },
+    ]);
+    continuePagination = doContinue;
   }
 }
 async function handleGetById(schemaName) {
@@ -167,17 +204,17 @@ async function handleGetById(schemaName) {
   try {
     // Obtener todos los registros
     const response = await axios.get(url);
-    const records = response.data;
 
-    // Verificar si hay registros disponibles
-    if (!records || records.length === 0) {
+    // Validar si la respuesta contiene un array válido
+    const records = response.data.documents || []; // Ajusta esto según la estructura real de la respuesta
+    if (!Array.isArray(records) || records.length === 0) {
       console.log(`⚠️ No se encontraron registros para ${schemaName}.`);
       return;
     }
 
     // Crear opciones para selección
     const options = records.map((record) => ({
-      name: `${record.name} (ID: ${record._id})`,
+      name: `${record.name || "Sin nombre"} (ID: ${record._id})`,
       value: record._id,
     }));
 
@@ -200,6 +237,8 @@ async function handleGetById(schemaName) {
     console.log(`✅ Detalles del ${schemaName}:`, detailResponse.data);
   } catch (error) {
     console.error(`❌ Error al obtener el ${schemaName}:`, error.message);
+
+    // Manejo adicional para errores específicos de respuesta
     if (error.response) {
       console.error("📋 Detalles del error:", error.response.data);
     }
@@ -273,8 +312,7 @@ async function handleUpdate(schemaName) {
   try {
     const response = await axios.get(url);
     const records = response.data;
-
-    if (!records || records.length === 0) {
+    if (!Array.isArray(records) || records.length === 0) {
       console.log(`⚠️ No se encontraron registros para ${schemaName}.`);
       return;
     }
@@ -369,15 +407,15 @@ async function handleDelete(schemaName) {
 
   try {
     const response = await axios.get(url);
-    const records = response.data;
+    const records = response.data.documents || []; // Ajusta esto según la estructura real de la respuesta
 
-    if (!records || records.length === 0) {
+    if (!Array.isArray(records) || records.length === 0) {
       console.log(`⚠️ No se encontraron registros para ${schemaName}.`);
       return;
     }
 
     const options = records.map((record) => ({
-      name: `${record.name} (ID: ${record._id})`,
+      name: `${record.name || "Sin nombre"} (ID: ${record._id})`,
       value: record._id,
     }));
 
